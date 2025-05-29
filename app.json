@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Zoopixie",
+    "slug": "zoopixie",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "zoopixie",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zoopixie.app"
+    },
+    "android": {
+      "package": "com.zoopixie.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "server",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": ["expo-router", "expo-font", "expo-web-browser"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "description": "Zoopixie is an innovative mobile application that brings children's artwork to life through advanced AI technology. It allows kids to scan their drawings and watch them transform into animated characters, fostering creativity and imagination in a safe, engaging environment."
+  }
+}
