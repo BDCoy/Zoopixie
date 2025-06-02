@@ -4,22 +4,30 @@ import {
   Text,
   Image,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
+  useWindowDimensions,
+  Platform,
 } from "react-native";
-
-import { LinearGradient } from "expo-linear-gradient";
+import { router } from 'expo-router';
+import GradientButton from "@/components/GradientButton";
+import TextButton from "@/components/TextButton";
 
 export default function SignupScreen() {
+  const { height } = useWindowDimensions();
+  const isSmallScreen = height < 700;
+
+  const handleGetStarted = () => {
+    router.push('/(auth)/signup-step-2');
+  };
+
+  const handleSignIn = () => {
+    router.push('/(auth)/signin');
+  };
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      bounces={false}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
       <View style={styles.content}>
-        <View style={styles.header}>
+        <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
           <Text style={styles.title}>Welcome to</Text>
           <Text style={styles.title}>Zoopixie</Text>
 
@@ -30,36 +38,36 @@ export default function SignupScreen() {
           <Text style={styles.subtitle}>their pictures to life</Text>
         </View>
 
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, isSmallScreen && styles.imageContainerSmall]}>
           <Image
-            source={require("../assets/images/child.png")}
-            style={styles.childImage}
+            source={require("../../assets/images/child.png")}
+            style={[
+              styles.childImage,
+              isSmallScreen && styles.childImageSmall
+            ]}
             resizeMode="contain"
           />
         </View>
 
         <View style={styles.footer}>
           <Image
-            source={require("../assets/images/bg-accent-1.png")}
+            source={require("../../assets/images/bg-accent-1.png")}
             style={styles.bgAccent}
             resizeMode="cover"
           />
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.buttonWrapper}>
-              <LinearGradient
-                colors={["#55b7fa", "#55f2a6"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.getStartedButton}
-              >
-                <Text style={styles.getStartedText}>Get started</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+            <GradientButton
+              text="Get started"
+              onPress={handleGetStarted}
+              style={styles.getStartedButton}
+            />
 
-            <TouchableOpacity style={styles.accountButton}>
-              <Text style={styles.accountText}>I have an account</Text>
-            </TouchableOpacity>
+            <TextButton
+              text="I have an account"
+              onPress={handleSignIn}
+              style={styles.accountButton}
+            />
           </View>
 
           <Text style={styles.privacyText}>
@@ -74,7 +82,7 @@ export default function SignupScreen() {
           </Text>
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -82,19 +90,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff2dd",
-  },
-  scrollContent: {
-    flexGrow: 1,
+    paddingVertical: 20,
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
     justifyContent: "space-between",
   },
   header: {
     alignItems: "center",
-    marginTop: 72,
+    marginTop: Platform.select({ ios: 72, web: 72, android: 52 }),
     gap: 24,
+  },
+  headerSmall: {
+    marginTop: Platform.select({ ios: 52, web: 52, android: 32 }),
+    gap: 16,
   },
   title: {
     fontSize: 40,
@@ -103,33 +113,37 @@ const styles = StyleSheet.create({
     color: "#f8a96e",
     marginBottom: -64,
   },
-  titleSecondLine: {
-    marginTop: 10,
-  },
   subtitle: {
     fontSize: 18,
     textAlign: "center",
     color: "#585858",
     fontFamily: "BalooTammudu2-Bold",
-    marginBottom: -39,
-    // lineHeight: 22,
+    marginBottom: -29,
   },
   subtitleFirstLine: {
-    marginTop: 20,
+    marginTop: 40,
   },
   imageContainer: {
     alignItems: "center",
-    marginVertical: 80,
+    marginVertical: 60,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  imageContainerSmall: {
+    marginVertical: 30,
   },
   childImage: {
     width: 320,
     height: 250,
   },
+  childImageSmall: {
+    width: 280,
+    height: 220,
+  },
   footer: {
     alignItems: "center",
-    marginTop: "auto",
     position: "relative",
-    marginBottom: 40,
+    marginBottom: Platform.select({ ios: 40, web: 40, android: 24 }),
   },
   bgAccent: {
     position: "absolute",
@@ -142,36 +156,15 @@ const styles = StyleSheet.create({
     width: 260,
     marginBottom: 20,
   },
-  buttonWrapper: {
-    width: "100%",
-  },
   getStartedButton: {
-    width: "100%",
-    borderRadius: 50,
     marginBottom: 10,
   },
-  getStartedText: {
-    fontSize: 24,
-    marginTop: 8,
-    color: "white",
-    textAlign: "center",
-    fontFamily: "BalooTammudu2-Bold",
-  },
   accountButton: {
-    width: "100%",
-    borderRadius: 100,
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  accountText: {
-    fontSize: 20,
-    color: "#585858",
-    fontFamily: "BalooTammudu2-Bold",
+    marginTop: 4,
   },
   privacyText: {
     textAlign: "center",
     marginHorizontal: 20,
-
   },
   privacyRegular: {
     fontSize: 12,

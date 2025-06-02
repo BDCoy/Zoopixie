@@ -5,9 +5,9 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import { SplashScreen } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
-
 import { useFonts } from 'expo-font';
 import { BalooTammudu2_400Regular, BalooTammudu2_700Bold } from '@expo-google-fonts/baloo-tammudu-2';
+import { SubscriptionProvider } from '@/context/SubscriptionContext';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -39,13 +39,14 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <SubscriptionProvider>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="upload" options={{ headerShown: false }}/>
       </Stack>
       <StatusBar style="auto" />
-    </>
+    </SubscriptionProvider>
   );
 }
 
