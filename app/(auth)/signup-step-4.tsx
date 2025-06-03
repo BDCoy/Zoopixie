@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import GradientButton from "@/components/GradientButton";
+import RightSvg from "../../assets/images/right.svg";
+import CircleXSvg from "../../assets/images/circle-x.svg";
 
 export default function SignupStep4Screen() {
   const { height } = useWindowDimensions();
@@ -78,8 +80,8 @@ export default function SignupStep4Screen() {
         {/* HEADER */}
         <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
           <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>
-            <Text style={styles.titleGrows}>Grows </Text>
-            <Text style={styles.titleUp}>up </Text>
+            <Text style={styles.titleGrows}>Grown-</Text>
+            <Text style={styles.titleUp}>ups </Text>
             <Text style={styles.titleOnly}>only!</Text>
           </Text>
           <Text
@@ -137,7 +139,7 @@ export default function SignupStep4Screen() {
                   isSmallScreen && styles.numberTextSmall,
                 ]}
               >
-                ⌫
+                <CircleXSvg width={20} height={20} />
               </Text>
             </TouchableOpacity>
             {renderNumber("0")}
@@ -155,7 +157,7 @@ export default function SignupStep4Screen() {
                   isSmallScreen && styles.numberTextSmall,
                 ]}
               >
-                →
+                <RightSvg width={23.25} height={20} />
               </Text>
             </TouchableOpacity>
           </View>
@@ -293,7 +295,6 @@ const styles = StyleSheet.create({
   },
   numberTextContinue: {
     fontSize: 30,
-    marginTop: 8,
     color: "white",
     fontFamily: "BalooTammudu2-Bold",
   },
