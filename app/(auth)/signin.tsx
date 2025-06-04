@@ -6,20 +6,26 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Platform,
 } from "react-native";
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import GradientButton from "@/components/GradientButton";
 import TextButton from "@/components/TextButton";
+import { supabase } from "@/lib/supabase";
 
 export default function SignInScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState({
+    email: "",
+    password: "",
+    general: "",
+  });
 
   const validateForm = () => {
-    const newErrors = { email: "", password: "" };
+    const newErrors = { email: "", password: "", general: "" };
     let isValid = true;
 
     if (!email) {
@@ -39,15 +45,32 @@ export default function SignInScreen() {
     return isValid;
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (validateForm()) {
-      // Handle signin logic here
-      console.log("Sign in successful!");
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        router.replace("/(app)/upload");
+      } catch (error: any) {
+        setErrors((prev) => ({
+          ...prev,
+          general: error.message || "Failed to sign in",
+        }));
+      }
     }
   };
 
   const handleCreateAccount = () => {
-    router.push('/');
+    router.push("/");
+  };
+
+  const handleForgotPassword = () => {
+    router.push("/forgot-password");
   };
 
   return (
@@ -60,9 +83,9 @@ export default function SignInScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Welcome Back!</Text>
-          <Text style={styles.subtitle}>
-            Sign in to continue your{'\n'}creative journey
-          </Text>
+
+          <Text style={styles.subtitle}>Sign in to continue your</Text>
+          <Text style={styles.subtitle2}>creative journey</Text>
         </View>
 
         <View style={styles.formContainer}>
@@ -72,24 +95,31 @@ export default function SignInScreen() {
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
-                setErrors(prev => ({ ...prev, email: "" }));
+                setErrors((prev) => ({ ...prev, email: "", general: "" }));
               }}
               placeholder="Enter your email..."
               placeholderTextColor="#B4B4B4"
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            {errors.email ? (
+              <Text style={styles.errorText}>{errors.email}</Text>
+            ) : null}
           </View>
 
           <View style={styles.inputWrapper}>
-            <View style={[styles.passwordContainer, errors.password ? styles.inputError : null]}>
+            <View
+              style={[
+                styles.passwordContainer,
+                errors.password ? styles.inputError : null,
+              ]}
+            >
               <TextInput
                 style={styles.passwordInput}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
-                  setErrors(prev => ({ ...prev, password: "" }));
+                  setErrors((prev) => ({ ...prev, password: "", general: "" }));
                 }}
                 placeholder="Enter your password..."
                 placeholderTextColor="#B4B4B4"
@@ -100,15 +130,25 @@ export default function SignInScreen() {
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Ionicons 
-                  name={showPassword ? "eye-off" : "eye"} 
-                  size={24} 
-                  color="#B4B4B4" 
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={24}
+                  color="#B4B4B4"
                 />
               </TouchableOpacity>
             </View>
-            {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+            {errors.password ? (
+              <Text style={styles.errorText}>{errors.password}</Text>
+            ) : null}
           </View>
+
+          {errors.general ? (
+            <Text style={styles.generalError}>{errors.general}</Text>
+          ) : null}
+
+          <TouchableOpacity onPress={handleForgotPassword}>
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
@@ -158,7 +198,15 @@ const styles = StyleSheet.create({
     color: "#f8a96e",
   },
   subtitle: {
+    marginTop: -20,
     fontSize: 18,
+    textAlign: "center",
+    color: "#585858",
+    fontFamily: "BalooTammudu2-Bold",
+  },
+  subtitle2: {
+    fontSize: 18,
+    marginTop: -15,
     textAlign: "center",
     color: "#585858",
     fontFamily: "BalooTammudu2-Bold",
@@ -173,9 +221,10 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: "white",
     borderRadius: 50,
-    paddingVertical: 12,
+    paddingVertical: Platform.select({ ios: 12, android: 10, web: 12 }),
     paddingHorizontal: 20,
-    fontSize: 16,
+    paddingTop: 20,
+    fontSize: 14,
     fontFamily: "BalooTammudu2-Bold",
     color: "#585858",
   },
@@ -187,9 +236,10 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: Platform.select({ ios: 12, android: 10, web: 12 }),
     paddingHorizontal: 20,
-    fontSize: 16,
+    paddingTop: 20,
+    fontSize: 14,
     fontFamily: "BalooTammudu2-Bold",
     color: "#585858",
   },
@@ -205,6 +255,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "BalooTammudu2-Regular",
     marginLeft: 4,
+  },
+  generalError: {
+    color: "#ff4444",
+    fontSize: 14,
+    fontFamily: "BalooTammudu2-Regular",
+    textAlign: "center",
+  },
+  forgotPassword: {
+    color: "#55b7fa",
+    fontSize: 14,
+    fontFamily: "BalooTammudu2-Bold",
+    textAlign: "right",
   },
   footer: {
     alignItems: "center",

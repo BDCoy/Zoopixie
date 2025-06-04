@@ -10,8 +10,8 @@ export default function Index() {
 
   // Redirect based on authentication status
   return session ? (
-    <Redirect href="/(app)" />
+    <Redirect href="/(app)/upload" />
   ) : (
-    <Redirect href="/(auth)/login" />
+    <Redirect href="/(auth)" />
   );
 }

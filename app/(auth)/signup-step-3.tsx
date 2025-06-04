@@ -13,53 +13,50 @@ import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import GradientButton from "@/components/GradientButton";
 import TextButton from "@/components/TextButton";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SignupStep3Screen() {
   const { childName } = useLocalSearchParams();
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
+  const { signUp } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email: string; password: string }>({
+  const [errors, setErrors] = useState<{ email: string; password: string; general: string }>({
     email: "",
     password: "",
+    general: "",
   });
 
-  // Define each requirement as { test: fn, message: string }
-  const passwordRequirements: {
-    test: (pw: string) => boolean;
-    message: string;
-  }[] = [
+  const passwordRequirements = [
     {
-      test: (pw) => pw.length >= 8,
+      test: (pw: string | any[]) => pw.length >= 8,
       message: "Password must be at least 8 characters long",
     },
     {
-      test: (pw) => /[A-Z]/.test(pw),
+      test: (pw: string) => /[A-Z]/.test(pw),
       message: "Password must contain at least one uppercase letter",
     },
     {
-      test: (pw) => /[0-9]/.test(pw),
+      test: (pw: string) => /[0-9]/.test(pw),
       message: "Password must contain at least one number",
     },
     {
-      test: (pw) => /[!@#$%^&*]/.test(pw),
+      test: (pw: string) => /[!@#$%^&*]/.test(pw),
       message: "Password must contain at least one special character",
     },
   ];
 
-  // Find which requirements are unmet
   const unmetRequirements = passwordRequirements
     .filter((req) => !req.test(password))
     .map((req) => req.message);
 
   const validateForm = () => {
-    const newErrors = { email: "", password: "" };
+    const newErrors = { email: "", password: "", general: "" };
     let isValid = true;
 
-    // Email validation
     if (!email) {
       newErrors.email = "Email is required";
       isValid = false;
@@ -68,14 +65,10 @@ export default function SignupStep3Screen() {
       isValid = false;
     }
 
-    // Password validation
     if (!password) {
       newErrors.password = "Password is required";
       isValid = false;
     } else if (unmetRequirements.length > 0) {
-      // If there are unmet requirements, we don't set a single error message here—
-      // we rely on unmetRequirements list below to show each bullet.
-      newErrors.password = "";
       isValid = false;
     }
 
@@ -83,9 +76,25 @@ export default function SignupStep3Screen() {
     return isValid;
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (validateForm()) {
-      router.push("/(auth)/subscription");
+      try {
+        await signUp(email, password, {
+          data: {
+            child_name: childName,
+            drawings_count: 0,
+            videos_count: 0,
+            age_verified: false
+          }
+        });
+
+        router.push("/(auth)/subscription");
+      } catch (error: any) {
+        setErrors(prev => ({
+          ...prev,
+          general: error.message || "Failed to sign up"
+        }));
+      }
     }
   };
 
@@ -111,14 +120,13 @@ export default function SignupStep3Screen() {
             isSmallScreen && styles.formContainerSmall,
           ]}
         >
-          {/* EMAIL FIELD */}
           <View style={styles.inputWrapper}>
             <TextInput
               style={[styles.input, errors.email ? styles.inputError : null]}
               value={email}
               onChangeText={(text) => {
                 setEmail(text);
-                setErrors((prev) => ({ ...prev, email: "" }));
+                setErrors((prev) => ({ ...prev, email: "", general: "" }));
               }}
               placeholder="Enter your email..."
               placeholderTextColor="#B4B4B4"
@@ -130,7 +138,6 @@ export default function SignupStep3Screen() {
             ) : null}
           </View>
 
-          {/* PASSWORD FIELD */}
           <View style={styles.inputWrapper}>
             <View
               style={[
@@ -143,7 +150,7 @@ export default function SignupStep3Screen() {
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
-                  setErrors((prev) => ({ ...prev, password: "" }));
+                  setErrors((prev) => ({ ...prev, password: "", general: "" }));
                 }}
                 placeholder="Enter a password..."
                 placeholderTextColor="#B4B4B4"
@@ -161,13 +168,9 @@ export default function SignupStep3Screen() {
                 />
               </TouchableOpacity>
             </View>
-            {/* If password is completely empty or fails basic check, show single error */}
-            {errors.password ? (
-              <Text style={styles.errorText}>{errors.password}</Text>
-            ) : null}
 
-            {/* Now show all unmet requirements as red bullets.
-                If unmetRequirements is empty, this View will not render. */}
+            {errors.general ? <Text style={styles.generalError}>{errors.general}</Text> : null}
+
             {unmetRequirements.length > 0 && (
               <View
                 style={[
@@ -294,6 +297,13 @@ const styles = StyleSheet.create({
     fontFamily: "BalooTammudu2-Bold",
     marginLeft: 4,
   },
+  generalError: {
+    color: "#ff4444",
+    fontSize: 14,
+    fontFamily: "BalooTammudu2-Regular",
+    textAlign: "center",
+    marginTop: 8,
+  },
   requirements: {
     paddingHorizontal: 10,
     marginTop: 20,
@@ -319,4 +329,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-

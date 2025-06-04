@@ -9,7 +9,7 @@ type AuthContextType = {
   session: Session | null;
   user: any | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, options?: { data?: any }) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -49,16 +49,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Sign up function
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, options?: { data?: any }) => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: { user }, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: options?.data
+        }
       });
+
       if (error) throw error;
-      // Navigate to verify email page
-      router.navigate("/(auth)/verify-email");
+
+     
     } catch (error: any) {
       throw error;
     } finally {
@@ -101,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "exp://your-redirect-url/reset-password",
+        redirectTo: `${window.location.origin}/update-password`,
       });
       if (error) throw error;
     } catch (error: any) {

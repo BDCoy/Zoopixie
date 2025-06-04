@@ -12,10 +12,13 @@ import { router } from "expo-router";
 import GradientButton from "@/components/GradientButton";
 import RightSvg from "../../assets/images/right.svg";
 import CircleXSvg from "../../assets/images/circle-x.svg";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SignupStep4Screen() {
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
+  const { user } = useAuth();
 
   const [yearInput, setYearInput] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -32,7 +35,7 @@ export default function SignupStep4Screen() {
     setError("");
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const currentYear = new Date().getFullYear();
     const birthYear = parseInt(yearInput, 10);
     const age = currentYear - birthYear;
@@ -52,8 +55,25 @@ export default function SignupStep4Screen() {
       return;
     }
 
-    // Proceed to next step or complete signup
-    router.push("/upload");
+    try {
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          birth_year: birthYear,
+          age_verified: true
+        })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      router.push("/(app)/upload");
+    } catch (error: any) {
+      setError(error.message);
+    }
   };
 
   const renderNumber = (num: string, id?: number) => (
@@ -72,12 +92,10 @@ export default function SignupStep4Screen() {
 
   return (
     <View style={styles.container}>
-      {/* Wrapping everything in a ScrollView to handle overflow */}
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {/* HEADER */}
         <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
           <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>
             <Text style={styles.titleGrows}>Grown-</Text>
@@ -92,7 +110,6 @@ export default function SignupStep4Screen() {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
-        {/* YEAR DISPLAY */}
         <View
           style={[styles.yearDisplay, isSmallScreen && styles.yearDisplaySmall]}
         >
@@ -113,7 +130,6 @@ export default function SignupStep4Screen() {
             ))}
         </View>
 
-        {/* KEYPAD */}
         <View style={[styles.keypad, isSmallScreen && styles.keypadSmall]}>
           <View style={styles.keypadRow}>
             {["1", "2", "3"].map((num, i) => renderNumber(num, i))}
@@ -163,7 +179,6 @@ export default function SignupStep4Screen() {
           </View>
         </View>
 
-        {/* FOOTER */}
         <View style={[styles.footer, isSmallScreen && styles.footerSmall]}>
           <GradientButton
             text="Continue"
@@ -182,7 +197,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff2dd",
     paddingVertical: 20,
   },
-  // content is now the ScrollView's contentContainerStyle
   content: {
     flexGrow: 1,
     paddingHorizontal: 20,
