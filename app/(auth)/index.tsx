@@ -6,8 +6,9 @@ import {
   StyleSheet,
   useWindowDimensions,
   Platform,
+  TouchableOpacity,
 } from "react-native";
-import { router } from 'expo-router';
+import { router } from "expo-router";
 import GradientButton from "@/components/GradientButton";
 import TextButton from "@/components/TextButton";
 
@@ -16,11 +17,23 @@ export default function SignupScreen() {
   const isSmallScreen = height < 700;
 
   const handleGetStarted = () => {
-    router.push('/(auth)/signup-step-2');
+    router.push("/(auth)/signup-step-2");
   };
 
   const handleSignIn = () => {
-    router.push('/(auth)/signin');
+    router.push("/(auth)/signin");
+  };
+
+  const handlePrivacyPolicy = () => {
+    router.push("/(auth)/privacy-policy");
+  };
+
+  const handleTermsOfUse = () => {
+    router.push("/(auth)/terms-of-use");
+  };
+
+  const handleSubscriptionTerms = () => {
+    router.push("/(auth)/subscription-terms");
   };
 
   return (
@@ -37,13 +50,15 @@ export default function SignupScreen() {
           <Text style={styles.subtitle}>their pictures to life</Text>
         </View>
 
-        <View style={[styles.imageContainer, isSmallScreen && styles.imageContainerSmall]}>
+        <View
+          style={[
+            styles.imageContainer,
+            isSmallScreen && styles.imageContainerSmall,
+          ]}
+        >
           <Image
             source={require("../../assets/images/child.png")}
-            style={[
-              styles.childImage,
-              isSmallScreen && styles.childImageSmall
-            ]}
+            style={[styles.childImage, isSmallScreen && styles.childImageSmall]}
             resizeMode="contain"
           />
         </View>
@@ -73,11 +88,17 @@ export default function SignupScreen() {
             <Text style={styles.privacyRegular}>
               By continuing you accept our:{" "}
             </Text>
-            <Text style={styles.linkText}>Privacy Policy</Text>
+            <TouchableOpacity onPress={handlePrivacyPolicy}>
+              <Text style={styles.linkText}>Privacy Policy</Text>
+            </TouchableOpacity>
             <Text style={styles.privacyRegular}>, </Text>
-            <Text style={styles.linkText}>Terms of Use</Text>
+            <TouchableOpacity onPress={handleTermsOfUse}>
+              <Text style={styles.linkText}>Terms of Use</Text>
+            </TouchableOpacity>
             <Text style={styles.privacyRegular}> and </Text>
-            <Text style={styles.linkText}>Subscription Terms</Text>
+            <TouchableOpacity onPress={handleSubscriptionTerms}>
+              <Text style={styles.linkText}>Subscription Terms</Text>
+            </TouchableOpacity>
           </Text>
         </View>
       </View>
@@ -126,7 +147,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginVertical: 60,
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   imageContainerSmall: {
     marginVertical: 30,
@@ -164,15 +185,16 @@ const styles = StyleSheet.create({
   privacyText: {
     textAlign: "center",
     marginHorizontal: 20,
+    fontFamily: "BalooTammudu2-Bold",
+    fontSize: 12,
   },
   privacyRegular: {
-    fontSize: 12,
     color: "#585858",
-    fontFamily: "BalooTammudu2-Bold",
+    fontSize: 12,
   },
   linkText: {
-    fontSize: 12,
     color: "#55b7fa",
-    fontFamily: "BalooTammudu2-Bold",
+    fontSize: 12,
+    textDecorationLine: "underline",
   },
 });

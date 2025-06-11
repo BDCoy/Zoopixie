@@ -11,6 +11,7 @@ import {
   BalooTammudu2_700Bold,
 } from "@expo-google-fonts/baloo-tammudu-2";
 import { AuthProvider } from "@/context/AuthContext";
+import { VideoProvider } from "@/context/VideoContext";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -43,13 +44,15 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(app)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{ presentation: "modal" }} />
-      </Stack>
-      <StatusBar style="auto" />
+      <VideoProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(app)" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" options={{ presentation: "modal" }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </VideoProvider>
     </AuthProvider>
   );
 }

@@ -1,26 +1,95 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Platform,
   ScrollView,
-  useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import ShareSvg from "../../assets/images/share.svg";
 import FileClock from "../../assets/images/file-clock.svg";
 import { router } from "expo-router";
+import { useVideo } from "@/context/VideoContext";
+import { getVideoUrl } from "@/lib/novita";
+import { Ionicons } from "@expo/vector-icons";
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useEvent } from 'expo';
 
 export default function VideoOutput() {
-  const { height } = useWindowDimensions();
-  const isSmallScreen = height < 700;
+  const { videoUrl, isGenerating, error, taskId, setVideoUrl, setError } = useVideo();
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchVideoUrl = async () => {
+      if (!taskId) return;
+
+      try {
+        const url = await getVideoUrl(taskId);
+        if (isMounted) {
+          setVideoUrl(url);
+        }
+      } catch (error: any) {
+        if (isMounted) {
+          setError(error.message);
+        }
+      }
+    };
+
+    if (taskId && !videoUrl && !error) {
+      fetchVideoUrl();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [taskId]);
 
   const handleHistoryPress = () => {
     router.push("/video-gallery");
   };
+
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  if (isGenerating || (!videoUrl && !error)) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#69c4e5" />
+        <Text style={styles.loadingText}>Generating your video...</Text>
+        <Text style={styles.loadingSubText}>This may take a few minutes</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.tryAgainText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!videoUrl) {
+    router.replace("/upload");
+    return null;
+  }
+
+  // Set up the player with the video URL
+  const player = useVideoPlayer(videoUrl, player => {
+    player.loop = true;
+    player.play();
+  });
+
+  const { isPlaying: currentIsPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
 
   return (
     <ScrollView 
@@ -29,17 +98,6 @@ export default function VideoOutput() {
       bounces={false}
       showsVerticalScrollIndicator={false}
     >
-      <Image
-        source={require("../../assets/images/bg-accent-2.png")}
-        style={styles.bgAccentTop}
-        resizeMode="cover"
-      />
-      <Image
-        source={require("../../assets/images/bg-accent-1.png")}
-        style={styles.bgAccentBottom}
-        resizeMode="cover"
-      />
-
       <TouchableOpacity 
         style={styles.historyButton}
         onPress={handleHistoryPress}
@@ -47,22 +105,33 @@ export default function VideoOutput() {
         <FileClock width={26} height={26} />
       </TouchableOpacity>
 
-      <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
-        <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>Wow!</Text>
-        <Text style={[styles.subtitle, isSmallScreen && styles.subtitleSmall]}>
-          Here is your video
-        </Text>
+      <View style={[styles.header]}>
+        <Text style={styles.title}>Wow!</Text>
+        <Text style={styles.subtitle}>Here is your video</Text>
       </View>
 
-      <View style={[styles.previewContainer, isSmallScreen && styles.previewContainerSmall]}>
-        <Image
-          source={require("../../assets/images/preview-1.png")}
-          style={[styles.previewImage, isSmallScreen && styles.previewImageSmall]}
-          resizeMode="cover"
+      <View style={styles.previewContainer}>
+        <VideoView
+          style={styles.previewVideo}
+          player={player}
+          allowsFullscreen
+          allowsPictureInPicture
         />
+        <TouchableOpacity 
+          style={styles.playPauseButton} 
+          onPress={togglePlayPause}
+        >
+          <View style={styles.playPauseBackground}>
+            <Ionicons 
+              name={currentIsPlaying ? "pause" : "play"} 
+              size={40} 
+              color="white"
+            />
+          </View>
+        </TouchableOpacity>
       </View>
 
-      <View style={[styles.footer, isSmallScreen && styles.footerSmall]}>
+      <View style={styles.footer}>
         <TouchableOpacity style={styles.buttonWrapper}>
           <LinearGradient
             colors={["#55b7fa", "#55f2a6"]}
@@ -86,25 +155,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff2dd",
-    paddingVertical: 20
+    paddingVertical: 20,
+  },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: Platform.select({ ios: 40, android: 24, web: 40 }),
-  },
-  bgAccentTop: {
-    position: "absolute",
-    width: 300,
-    height: 274,
-    left: -115,
-    top: 16,
-  },
-  bgAccentBottom: {
-    position: "absolute",
-    width: 230,
-    height: 210,
-    right: -98,
-    top: "60%",
   },
   historyButton: {
     position: "absolute",
@@ -121,54 +180,57 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: Platform.select({ ios: 80, android: 60, web: 80 }),
   },
-  headerSmall: {
-    marginTop: Platform.select({ ios: 60, android: 40, web: 60 }),
-  },
   title: {
     fontSize: 50,
     textAlign: "center",
     fontFamily: "BalooTammudu2-Bold",
     color: "#f8a96e",
   },
-  titleSmall: {
-    fontSize: 40,
-  },
   subtitle: {
     fontSize: 34,
     textAlign: "center",
     fontFamily: "BalooTammudu2-Bold",
     color: "#69c4e5",
-    marginTop: -20,
-  },
-  subtitleSmall: {
-    fontSize: 28,
-    marginTop: -36,
+    marginTop: -40,
   },
   previewContainer: {
     alignItems: "center",
-    marginTop: Platform.select({ ios: 40, android: 30, web: 40 }),
-  },
-  previewContainerSmall: {
-    marginTop: Platform.select({ ios: 20, android: 16, web: 20 }),
-  },
-  previewImage: {
-    width: 250,
-    height: 444,
+    width: "100%",
+    aspectRatio: 9/16,
+    maxWidth: 300,
+    alignSelf: "center",
     borderRadius: 20,
     borderWidth: 5,
     borderColor: "#fb9b84",
+    overflow: "hidden",
+    position: "relative",
   },
-  previewImageSmall: {
-    width: 220,
-    height: 391,
+  previewVideo: {
+    width: "100%",
+    height: "100%",
+  },
+  playPauseButton: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: [{ translateX: -30 }, { translateY: -30 }],
+    width: 60,
+    height: 60,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  playPauseBackground: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   footer: {
     alignItems: "center",
     marginTop: Platform.select({ ios: 40, android: 30, web: 40 }),
     paddingHorizontal: 20,
-  },
-  footerSmall: {
-    marginTop: Platform.select({ ios: 30, android: 24, web: 30 }),
   },
   buttonWrapper: {
     width: 300,
@@ -201,5 +263,32 @@ const styles = StyleSheet.create({
     color: "#30d887",
     textAlign: "center",
     marginTop: -20,
+  },
+  loadingText: {
+    fontSize: 24,
+    fontFamily: "BalooTammudu2-Bold",
+    color: "#69c4e5",
+    textAlign: "center",
+    marginTop: 20,
+  },
+  loadingSubText: {
+    fontSize: 16,
+    fontFamily: "BalooTammudu2-Regular",
+    color: "#585858",
+    textAlign: "center",
+    marginTop: 8,
+  },
+  errorText: {
+    fontSize: 18,
+    fontFamily: "BalooTammudu2-Bold",
+    color: "#ff4444",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  tryAgainText: {
+    fontSize: 18,
+    fontFamily: "BalooTammudu2-Bold",
+    color: "#55b7fa",
+    textAlign: "center",
   },
 });
