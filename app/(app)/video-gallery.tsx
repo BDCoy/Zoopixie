@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,161 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useVideo } from "@/context/VideoContext";
 import RightArrow from "../../assets/images/left.svg";
 
+interface AIVideo {
+  id: string;
+  user_id: string;
+  task_id: string;
+  video_url: string;
+  video_title: string;
+  video_status: string;
+  generated_at: string;
+  updated_at: string;
+}
+
 export default function VideoGallery() {
+  const { user } = useAuth();
+  const { setVideoUrl } = useVideo();
+  const [videos, setVideos] = useState<AIVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserVideos();
+    }
+  }, [user]);
+
+  const fetchUserVideos = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('ai_videos')
+        .select('*')
+        .eq('user_id', user.id)
+        .not('video_url', 'is', null)
+        .order('generated_at', { ascending: false });
+
+      if (error) throw error;
+      setVideos(data || []);
+    } catch (error: any) {
+      console.error('Error fetching videos:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVideoPress = (video: AIVideo) => {
+    setVideoUrl(video.video_url);
+    router.push("/video-output");
+  };
+
   const handleBack = () => {
     router.back();
+  };
+
+  const formatDuration = (url: string) => {
+    // For now, return a random duration between 30-60 seconds
+    // In a real app, you'd extract this from video metadata
+    const durations = ["0:30", "0:45", "0:38", "0:52", "0:41", "0:49"];
+    const hash = url.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return durations[Math.abs(hash) % durations.length];
+  };
+
+  const getVideoThumbnail = (videoUrl: string) => {
+    // For now, we'll use placeholder thumbnails
+    // In production, you'd generate actual video thumbnails
+    const thumbnails = [
+      "https://images.pexels.com/photos/1261728/pexels-photo-1261728.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+      "https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+      "https://images.pexels.com/photos/1261427/pexels-photo-1261427.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+      "https://images.pexels.com/photos/1261820/pexels-photo-1261820.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+      "https://images.pexels.com/photos/1261422/pexels-photo-1261422.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
+    ];
+    
+    const hash = videoUrl.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return thumbnails[Math.abs(hash) % thumbnails.length];
+  };
+
+  const renderVideoItem = (video: AIVideo) => (
+    <TouchableOpacity 
+      key={video.id} 
+      style={styles.videoItem}
+      onPress={() => handleVideoPress(video)}
+    >
+      <Image
+        source={{ uri: getVideoThumbnail(video.video_url) }}
+        style={styles.thumbnail}
+        defaultSource={require("../../assets/images/rectangle-2.jpeg")}
+      />
+      <View style={styles.durationContainer}>
+        <View style={styles.playIcon} />
+        <Text style={styles.duration}>{formatDuration(video.video_url)}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#69C4E5" />
+          <Text style={styles.loadingText}>Loading your videos...</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Failed to load videos</Text>
+          <TouchableOpacity onPress={fetchUserVideos} style={styles.retryButton}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (videos.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No videos yet!</Text>
+          <Text style={styles.emptySubText}>Create your first animated drawing</Text>
+          <TouchableOpacity 
+            onPress={() => router.push("/upload")} 
+            style={styles.createButton}
+          >
+            <Text style={styles.createButtonText}>Create Video</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <>
+        <Text style={styles.sectionTitle}>
+          {videos.length === 1 ? "1 Video" : `${videos.length} Videos`}
+        </Text>
+        <View style={styles.videoGrid}>
+          {videos.map(renderVideoItem)}
+        </View>
+      </>
+    );
   };
 
   return (
@@ -34,31 +182,7 @@ export default function VideoGallery() {
           <Text style={[styles.titleChar, styles.titleS]}>s</Text>
         </Text>
 
-        <Text style={styles.sectionTitle}>Today</Text>
-
-        <View style={styles.videoGrid}>
-          <View style={styles.videoItem}>
-            <Image
-              source={require("../../assets/images/rectangle-2.jpeg")}
-              style={styles.thumbnail}
-            />
-            <View style={styles.durationContainer}>
-              <View style={styles.playIcon} />
-              <Text style={styles.duration}>0:49</Text>
-            </View>
-          </View>
-
-          <View style={styles.videoItem}>
-            <Image
-              source={require("../../assets/images/rectangle-3.jpeg")}
-              style={styles.thumbnail}
-            />
-            <View style={styles.durationContainer}>
-              <View style={styles.playIcon} />
-              <Text style={styles.duration}>0:38</Text>
-            </View>
-          </View>
-        </View>
+        {renderContent()}
       </View>
     </ScrollView>
   );
@@ -143,6 +267,70 @@ const styles = StyleSheet.create({
   duration: {
     fontSize: 6,
     color: "white",
+    fontFamily: "BalooTammudu2-Bold",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#585858",
+    fontFamily: "BalooTammudu2-Bold",
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  errorText: {
+    fontSize: 18,
+    color: "#ff4444",
+    fontFamily: "BalooTammudu2-Bold",
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: "#69C4E5",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  retryText: {
+    color: "white",
+    fontSize: 16,
+    fontFamily: "BalooTammudu2-Bold",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 24,
+    color: "#585858",
+    fontFamily: "BalooTammudu2-Bold",
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 16,
+    color: "#B4B4B4",
+    fontFamily: "BalooTammudu2-Regular",
+    marginBottom: 24,
+  },
+  createButton: {
+    backgroundColor: "#55F2A6",
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+  },
+  createButtonText: {
+    color: "white",
+    fontSize: 18,
     fontFamily: "BalooTammudu2-Bold",
   },
 });

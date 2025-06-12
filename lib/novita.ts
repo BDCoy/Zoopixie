@@ -37,48 +37,61 @@ function generatePromptFromDrawing(): string {
   return "Convert the uploaded drawing into a realistic, animated video using AI. For example, if I upload a drawing of a car, the drawing should be animated and appear as realistic as it would in a movie.";
 }
 
-// Optimized polling for task result with maximum 1 minute waiting time
 async function pollTaskResult(
   taskId: string,
-  maxWaitTime: number = 60000
+  maxWaitTime: number = 120000 // 2 minutes (120,000 ms)
 ): Promise<string> {
   const startTime = Date.now();
-  let attempts = 0;
 
+  // Function to add delay (20 seconds)
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
   while (Date.now() - startTime < maxWaitTime) {
     try {
-      const resultResponse = await fetch(
-        `${API_BASE_URL}/async/task-result?task_id=${taskId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${API_KEY}`,
-          },
-        }
-      );
+      // Query the database for the current task status
+      const { data, error } = await supabase
+        .from("ai_videos")
+        .select("video_status, video_url")
+        .eq("task_id", taskId)
+        .single();
 
-      if (!resultResponse.ok) {
-        throw new Error("Failed to check video status");
+      if (error) {
+        throw new Error("Failed to check video status in the database");
       }
 
-      const result = await resultResponse.json();
-
-      if (result.task.status === "TASK_STATUS_SUCCEED") {
-        return result.videos[0].video_url;
-      } else if (result.task.status === "TASK_STATUS_FAILED") {
-        throw new Error(result.task.reason || "Video generation failed");
+      if (!data) {
+        throw new Error("No video found with the provided task_id");
       }
 
-      // Wait 10 seconds before checking again
-      await delay(10000);
-      attempts++;
+      const { video_status, video_url } = data;
+
+      // If the task is successful, return the video URL
+      if (video_status === "TASK_STATUS_SUCCEED") {
+        return video_url;
+      }
+
+      // If the task failed, throw an error
+      if (video_status === "TASK_STATUS_FAILED") {
+        throw new Error("Video generation failed");
+      }
+
+      // If the task is still processing or queued, wait 20 seconds before checking again
+      if (
+        video_status === "TASK_STATUS_QUEUED" ||
+        video_status === "TASK_STATUS_PROCESSING"
+      ) {
+        await delay(20000); // Wait 20 seconds before checking again
+        continue;
+      }
+
+      // If the status is something unexpected
+      throw new Error("Unexpected task status");
     } catch (error: any) {
       if (Date.now() - startTime >= maxWaitTime) {
         throw new Error("Video generation timed out");
       }
-      await delay(10000); // Retry after a delay
+      await delay(20000); // Retry after 20 seconds
     }
   }
 
@@ -88,12 +101,13 @@ async function pollTaskResult(
 // Generate video and get taskId with fast_mode flag
 export async function generateVideo(
   imageBase64: string,
-  fastMode: boolean = false
+  userId: string
 ): Promise<{ taskId: string; videoUrl?: string }> {
   try {
     // Upload image and get public URL
     const imageUrl = await uploadImageToSupabase(imageBase64);
-
+    const WEBHOOK_URL = process.env.EXPO_PUBLIC_WEBHOOK_API;
+    console.log(WEBHOOK_URL)
     const generateResponse = await fetch(`${API_BASE_URL}/async/wan-i2v`, {
       method: "POST",
       headers: {
@@ -105,7 +119,12 @@ export async function generateVideo(
         height: 1280,
         width: 720,
         prompt: generatePromptFromDrawing(),
-        fast_mode: fastMode, // Fast mode flag
+        fast_mode: true, // Fast mode flag
+        extra: {
+          webhook: {
+            url: WEBHOOK_URL,
+          },
+        },
       }),
     });
 
@@ -114,7 +133,21 @@ export async function generateVideo(
     }
 
     const { task_id } = await generateResponse.json();
-    return { taskId: task_id };
+
+    // Save the task_id and set initial status as 'TASK_STATUS_PROCESSING' in Supabase
+    const { error } = await supabase.from("ai_videos").insert([
+      {
+        task_id, // Save the task_id to link to the video
+        user_id: userId,
+        video_status: "TASK_STATUS_PROCESSING", // Set the status as processing initially
+      },
+    ]);
+
+    if (error) {
+      throw new Error("Failed to save task ID to the database");
+    }
+
+    return { taskId: task_id }; // Return task_id
   } catch (error: any) {
     throw new Error(error.message || "Failed to generate video");
   }

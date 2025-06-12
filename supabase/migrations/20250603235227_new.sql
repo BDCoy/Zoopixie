@@ -51,3 +51,35 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+create type video_status_enum as enum (
+  'TASK_STATUS_QUEUED',
+  'TASK_STATUS_SUCCEED',
+  'TASK_STATUS_FAILED',
+  'TASK_STATUS_PROCESSING'
+);
+
+create table ai_videos (
+  id serial primary key,  -- Unique identifier for the video
+  user_id uuid references users(id) on delete cascade,  -- Associate the video with a user
+  video_url text not null,  -- URL to the generated video
+  video_title text not null,  -- Title or description for the video
+  video_status video_status_enum default 'TASK_STATUS_PROCESSING',  -- Use ENUM for task status
+  generated_at timestamp with time zone default now(),  -- Timestamp for when the video was generated
+  updated_at timestamp with time zone default now()  -- Timestamp for the last update
+);
+
+create or replace function update_video_count()
+returns trigger as $$
+begin
+
+  update users
+  set videos_count = videos_count + 1
+  where id = new.user_id;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger video_count_trigger
+  after insert on ai_videos
+  for each row execute function update_video_count();

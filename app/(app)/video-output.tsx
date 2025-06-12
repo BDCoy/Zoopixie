@@ -6,21 +6,23 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
+  useWindowDimensions,
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import ShareSvg from "../../assets/images/share.svg";
-import FileClock from "../../assets/images/file-clock.svg";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useVideo } from "@/context/VideoContext";
+import { Video } from "expo-av";
 import { getVideoUrl } from "@/lib/novita";
-import { Ionicons } from "@expo/vector-icons";
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEvent } from 'expo';
+import ShareModal from "@/components/ShareModal";
 
 export default function VideoOutput() {
+  const { height } = useWindowDimensions();
+  const isSmallScreen = height < 700;
   const { videoUrl, isGenerating, error, taskId, setVideoUrl, setError } = useVideo();
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -53,6 +55,14 @@ export default function VideoOutput() {
     router.push("/video-gallery");
   };
 
+  const handleSharePress = () => {
+    setShowShareModal(true);
+  };
+
+  const handleCreateMore = () => {
+    router.push("/(app)/upload");
+  };
+
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
   };
@@ -83,71 +93,77 @@ export default function VideoOutput() {
     return null;
   }
 
-  // Set up the player with the video URL
-  const player = useVideoPlayer(videoUrl, player => {
-    player.loop = true;
-    player.play();
-  });
-
-  const { isPlaying: currentIsPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
-
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      bounces={false}
-      showsVerticalScrollIndicator={false}
-    >
-      <TouchableOpacity 
-        style={styles.historyButton}
-        onPress={handleHistoryPress}
+    <>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
       >
-        <FileClock width={26} height={26} />
-      </TouchableOpacity>
-
-      <View style={[styles.header]}>
-        <Text style={styles.title}>Wow!</Text>
-        <Text style={styles.subtitle}>Here is your video</Text>
-      </View>
-
-      <View style={styles.previewContainer}>
-        <VideoView
-          style={styles.previewVideo}
-          player={player}
-          allowsFullscreen
-          allowsPictureInPicture
-        />
         <TouchableOpacity 
-          style={styles.playPauseButton} 
-          onPress={togglePlayPause}
+          style={styles.historyButton}
+          onPress={handleHistoryPress}
         >
-          <View style={styles.playPauseBackground}>
-            <Ionicons 
-              name={currentIsPlaying ? "pause" : "play"} 
-              size={40} 
-              color="white"
-            />
-          </View>
+          <Ionicons name="time" size={26} color="#585858" />
         </TouchableOpacity>
-      </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.buttonWrapper}>
-          <LinearGradient
-            colors={["#55b7fa", "#55f2a6"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
+        <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
+          <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>Wow!</Text>
+          <Text style={[styles.subtitle, isSmallScreen && styles.subtitleSmall]}>
+            Here is your video
+          </Text>
+        </View>
+
+        <View style={[styles.previewContainer, isSmallScreen && styles.previewContainerSmall]}>
+          <Video
+            source={{ uri: videoUrl }}
+            style={[styles.previewVideo, isSmallScreen && styles.previewVideoSmall]}
+            useNativeControls={false}
+            resizeMode="cover"
+            isLooping
+            shouldPlay={isPlaying}
+          />
+          <TouchableOpacity 
+            style={styles.playPauseButton} 
+            onPress={togglePlayPause}
           >
-            <ShareSvg width={26} height={26} />
-            <Text style={styles.buttonText}>Share with your friends!</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <View style={styles.playPauseBackground}>
+              <Ionicons 
+                name={isPlaying ? "pause" : "play"} 
+                size={40} 
+                color="white"
+              />
+            </View>
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.priceText}>Make more for just .99¢</Text>
-        <Text style={styles.getMoreText}>Get more DrawMagic!</Text>
-      </View>
-    </ScrollView>
+        <View style={[styles.footer, isSmallScreen && styles.footerSmall]}>
+          <TouchableOpacity style={styles.buttonWrapper} onPress={handleSharePress}>
+            <LinearGradient
+              colors={["#55b7fa", "#55f2a6"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientButton}
+            >
+              <Ionicons name="share" size={26} color="white" />
+              <Text style={styles.buttonText}>Share with your friends!</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <Text style={styles.priceText}>Make more for just .99¢</Text>
+          <TouchableOpacity onPress={handleCreateMore}>
+            <Text style={styles.getMoreText}>Get more DrawMagic!</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      <ShareModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        videoUrl={videoUrl}
+      />
+    </>
   );
 }
 
@@ -180,11 +196,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: Platform.select({ ios: 80, android: 60, web: 80 }),
   },
+  headerSmall: {
+    marginTop: Platform.select({ ios: 60, android: 40, web: 60 }),
+  },
   title: {
     fontSize: 50,
     textAlign: "center",
     fontFamily: "BalooTammudu2-Bold",
     color: "#f8a96e",
+  },
+  titleSmall: {
+    fontSize: 40,
   },
   subtitle: {
     fontSize: 34,
@@ -192,6 +214,10 @@ const styles = StyleSheet.create({
     fontFamily: "BalooTammudu2-Bold",
     color: "#69c4e5",
     marginTop: -40,
+  },
+  subtitleSmall: {
+    fontSize: 28,
+    marginTop: -36,
   },
   previewContainer: {
     alignItems: "center",
@@ -205,7 +231,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
   },
+  previewContainerSmall: {
+    marginTop: Platform.select({ ios: 20, android: 16, web: 20 }),
+    maxWidth: 320,
+  },
   previewVideo: {
+    width: "100%",
+    height: "100%",
+  },
+  previewVideoSmall: {
     width: "100%",
     height: "100%",
   },
@@ -231,6 +265,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: Platform.select({ ios: 40, android: 30, web: 40 }),
     paddingHorizontal: 20,
+  },
+  footerSmall: {
+    marginTop: Platform.select({ ios: 30, android: 24, web: 30 }),
   },
   buttonWrapper: {
     width: 300,
