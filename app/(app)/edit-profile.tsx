@@ -8,18 +8,21 @@ import {
   ScrollView,
   Platform,
   Alert,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import GradientButton from "@/components/GradientButton";
 import RightArrow from "../../assets/images/left.svg";
+import CamerUpload from "../../assets/images/camera-upload.svg";
+import DefaultAvatar from "../../assets/images/default-avatar.svg";
+import * as ImagePicker from "expo-image-picker";
 
 export default function EditProfileScreen() {
   const { user } = useAuth();
   const [childName, setChildName] = useState("");
-  const [username, setUsername] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -31,14 +34,14 @@ export default function EditProfileScreen() {
     try {
       const { data, error } = await supabase
         .from("users")
-        .select("child_name, email")
+        .select("child_name, email, avatar_url")
         .eq("id", user.id)
         .single();
 
       if (error) throw error;
       if (data) {
         setChildName(data.child_name || "");
-        setUsername(data.email?.split("@")[0] || "");
+        setAvatarUri(data.avatar_url || null);
       }
     } catch (error: any) {
       console.error("Error fetching profile:", error.message);
@@ -46,16 +49,46 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
+    console.log(childName)
     if (!childName.trim()) {
       Alert.alert("Error", "Name cannot be empty");
       return;
     }
 
-    setIsLoading(true);
     try {
+      const updatedFields: any = { child_name: childName.trim() };
+
+      if (avatarUri) {
+        // Upload avatar if it's selected
+        const avatarFilename = `${user.id}-${Date.now()}.jpg`;
+        const avatarPath = `avatars/${avatarFilename}`;
+
+        // Convert the URI to a Blob to upload
+        const response = await fetch(avatarUri);
+        const blob = await response.blob();
+
+        const avatarUpload = await supabase.storage
+          .from("avatars")
+          .upload(avatarPath, blob, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (avatarUpload.error) throw avatarUpload.error;
+
+        // Get the public URL for the uploaded avatar
+        const { data } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(avatarPath);
+
+        if (!data) throw new Error("No data found");
+
+        updatedFields.avatar_url = data.publicUrl;
+      }
+
       const { error } = await supabase
         .from("users")
-        .update({ child_name: childName.trim() })
+        .update(updatedFields)
         .eq("id", user.id);
 
       if (error) throw error;
@@ -64,13 +97,37 @@ export default function EditProfileScreen() {
       router.back();
     } catch (error: any) {
       Alert.alert("Error", error.message);
-    } finally {
-      setIsLoading(false);
+    }
+  };
+
+  const handleAvatarChange = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted) {
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (
+        !pickerResult.canceled &&
+        pickerResult.assets &&
+        pickerResult.assets.length > 0
+      ) {
+        setAvatarUri(pickerResult.assets[0].uri);
+      }
+    } else {
+      Alert.alert(
+        "Permission denied",
+        "You need to allow access to the photo library."
+      );
     }
   };
 
   const handleBack = () => {
-    router.replace('/(app)/profile')
+    router.replace("/(app)/profile");
   };
 
   return (
@@ -88,14 +145,23 @@ export default function EditProfileScreen() {
         </Text>
 
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <View style={styles.avatarInner}>
-              <Text style={styles.avatarEmoji}>🌸</Text>
+          <TouchableOpacity onPress={handleAvatarChange}>
+            <View style={styles.avatar}>
+              <View style={styles.avatarInner}>
+                {avatarUri ? (
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <DefaultAvatar width={100} height={100} />
+                )}
+              </View>
+              <View style={styles.cameraIcon}>
+                <CamerUpload width={31} height={31} />
+              </View>
             </View>
-            <View style={styles.cameraIcon}>
-              <Text style={styles.cameraEmoji}>📷</Text>
-            </View>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.formContainer}>
@@ -105,19 +171,8 @@ export default function EditProfileScreen() {
               style={styles.input}
               value={childName}
               onChangeText={setChildName}
-              placeholder="Martin"
+              placeholder="Update your name "
               placeholderTextColor="#B4B4B4"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Username</Text>
-            <TextInput
-              style={[styles.input, styles.disabledInput]}
-              value={username}
-              placeholder="Martin.fl"
-              placeholderTextColor="#B4B4B4"
-              editable={false}
             />
           </View>
         </View>
@@ -135,10 +190,10 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
- container: {
+  container: {
     flex: 1,
     backgroundColor: "#fff2dd",
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
   },
   content: {
     padding: 20,
@@ -188,8 +243,10 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: "white",
   },
-  avatarEmoji: {
-    fontSize: 40,
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   cameraIcon: {
     position: "absolute",
@@ -204,9 +261,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "white",
   },
-  cameraEmoji: {
-    fontSize: 16,
-  },
   formContainer: {
     gap: 24,
     marginBottom: 60,
@@ -215,27 +269,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: "BalooTammudu2-Bold",
     color: "#585858",
     marginLeft: 4,
+    marginBottom: -10,
   },
   input: {
     backgroundColor: "white",
-    borderRadius: 25,
+    borderRadius: 50,
     paddingVertical: Platform.select({ ios: 16, android: 14, web: 16 }),
     paddingHorizontal: 20,
     fontSize: 16,
-    fontFamily: "BalooTammudu2-Regular",
+    height: 65,
+    fontFamily: "BalooTammudu2-Bold",
     color: "#585858",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   disabledInput: {
     backgroundColor: "#F5F5F5",
@@ -246,6 +294,6 @@ const styles = StyleSheet.create({
     marginTop: "auto",
   },
   saveButton: {
-    width: 200,
+    width: "80%",
   },
 });

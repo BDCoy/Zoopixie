@@ -120,7 +120,6 @@ export default function VideoOutput() {
             source={{ uri: videoUrl }}
             style={[styles.previewVideo, isSmallScreen && styles.previewVideoSmall]}
             useNativeControls={false}
-            resizeMode="cover"
             isLooping
             shouldPlay={isPlaying}
           />

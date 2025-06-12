@@ -12,6 +12,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import RightArrow from "../../assets/images/left.svg";
 
+import UserIcon from "../../assets/images/user-round-blue.svg";
+import MailIcon from "../../assets/images/mail.svg";
+import LockIcon from "../../assets/images/lock.svg";
+import Logout from "../../assets/images/log-out.svg";
+
 export default function ProfileScreen() {
   const { signOut } = useAuth();
 
@@ -66,8 +71,8 @@ export default function ProfileScreen() {
             onPress={handleEditProfile}
           >
             <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, styles.editProfileIcon]}>
-                <Ionicons name="person" size={20} color="white" />
+              <View style={[styles.iconContainer]}>
+                <UserIcon width={24} height={24} />
               </View>
               <Text style={styles.settingText}>Edit Profile</Text>
             </View>
@@ -79,8 +84,8 @@ export default function ProfileScreen() {
             onPress={handleChangeEmail}
           >
             <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, styles.changeEmailIcon]}>
-                <Ionicons name="mail" size={20} color="white" />
+              <View style={[styles.iconContainer]}>
+                <MailIcon width={24} height={24} />
               </View>
               <Text style={styles.settingText}>Change Email</Text>
             </View>
@@ -92,18 +97,21 @@ export default function ProfileScreen() {
             onPress={handleChangePassword}
           >
             <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, styles.changePasswordIcon]}>
-                <Ionicons name="lock-closed" size={20} color="white" />
+              <View style={[styles.iconContainer]}>
+                <LockIcon width={24} height={24} />
               </View>
               <Text style={styles.settingText}>Change Password</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#585858" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem} onPress={handleLogout}>
+          <TouchableOpacity
+            style={[styles.settingItem, styles.settingLastItem]}
+            onPress={handleLogout}
+          >
             <View style={styles.settingLeft}>
-              <View style={[styles.iconContainer, styles.logoutIcon]}>
-                <Ionicons name="log-out" size={20} color="white" />
+              <View style={[styles.iconContainer]}>
+                <Logout width={24} height={24} />
               </View>
               <Text style={[styles.settingText, styles.logoutText]}>
                 Logout
@@ -117,10 +125,10 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
- container: {
+  container: {
     flex: 1,
     backgroundColor: "#fff2dd",
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
   },
   content: {
     padding: 20,
@@ -168,7 +176,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-
+    borderBottomColor: "#e0e0e0",
+    borderBottomWidth: 0.5,
+  },
+  settingLastItem: {
+    borderBottomWidth: 0,
   },
   settingLeft: {
     flexDirection: "row",
@@ -176,24 +188,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
+    marginTop: -10,
   },
-  editProfileIcon: {
-    backgroundColor: "#69C4E5",
-  },
-  changeEmailIcon: {
-    backgroundColor: "#55F2A6",
-  },
-  changePasswordIcon: {
-    backgroundColor: "#FAAA61",
-  },
-  logoutIcon: {
-    backgroundColor: "#F48D77",
-  },
+
   settingText: {
     fontSize: 18,
     fontFamily: "BalooTammudu2-Bold",

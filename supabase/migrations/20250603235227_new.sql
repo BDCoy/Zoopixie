@@ -7,6 +7,7 @@ create table users (
   id uuid references auth.users not null primary key,
   email text unique not null,
   child_name text not null,
+  avatar_url text,
   drawings_count integer default 0,
   videos_count integer default 0,
   age_verified boolean default false,
