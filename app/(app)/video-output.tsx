@@ -14,13 +14,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useVideo } from "@/context/VideoContext";
 import { Video } from "expo-av";
-import { getVideoUrl } from "@/lib/novita";
+import { getVideoUrl } from "@/lib/ai";
 import ShareModal from "@/components/ShareModal";
 
 export default function VideoOutput() {
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
-  const { videoUrl, isGenerating, error, taskId, setVideoUrl, setError } = useVideo();
+  const { videoUrl, isGenerating, error, taskId, setVideoUrl, setError } =
+    useVideo();
   const [isPlaying, setIsPlaying] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
 
@@ -81,7 +82,12 @@ export default function VideoOutput() {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => {
+            router.back();
+            setError(null);
+          }}
+        >
           <Text style={styles.tryAgainText}>Try Again</Text>
         </TouchableOpacity>
       </View>
@@ -95,13 +101,13 @@ export default function VideoOutput() {
 
   return (
     <>
-      <ScrollView 
+      <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         bounces={false}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.historyButton}
           onPress={handleHistoryPress}
         >
@@ -109,28 +115,40 @@ export default function VideoOutput() {
         </TouchableOpacity>
 
         <View style={[styles.header, isSmallScreen && styles.headerSmall]}>
-          <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>Wow!</Text>
-          <Text style={[styles.subtitle, isSmallScreen && styles.subtitleSmall]}>
+          <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>
+            Wow!
+          </Text>
+          <Text
+            style={[styles.subtitle, isSmallScreen && styles.subtitleSmall]}
+          >
             Here is your video
           </Text>
         </View>
 
-        <View style={[styles.previewContainer, isSmallScreen && styles.previewContainerSmall]}>
+        <View
+          style={[
+            styles.previewContainer,
+            isSmallScreen && styles.previewContainerSmall,
+          ]}
+        >
           <Video
             source={{ uri: videoUrl }}
-            style={[styles.previewVideo, isSmallScreen && styles.previewVideoSmall]}
+            style={[
+              styles.previewVideo,
+              isSmallScreen && styles.previewVideoSmall,
+            ]}
             useNativeControls={false}
             isLooping
             shouldPlay={isPlaying}
           />
-          <TouchableOpacity 
-            style={styles.playPauseButton} 
+          <TouchableOpacity
+            style={styles.playPauseButton}
             onPress={togglePlayPause}
           >
             <View style={styles.playPauseBackground}>
-              <Ionicons 
-                name={isPlaying ? "pause" : "play"} 
-                size={40} 
+              <Ionicons
+                name={isPlaying ? "pause" : "play"}
+                size={40}
                 color="white"
               />
             </View>
@@ -138,7 +156,10 @@ export default function VideoOutput() {
         </View>
 
         <View style={[styles.footer, isSmallScreen && styles.footerSmall]}>
-          <TouchableOpacity style={styles.buttonWrapper} onPress={handleSharePress}>
+          <TouchableOpacity
+            style={styles.buttonWrapper}
+            onPress={handleSharePress}
+          >
             <LinearGradient
               colors={["#55b7fa", "#55f2a6"]}
               start={{ x: 0, y: 0 }}
@@ -220,8 +241,9 @@ const styles = StyleSheet.create({
   },
   previewContainer: {
     alignItems: "center",
-    width: "100%",
-    aspectRatio: 9/16,
+    width: "50%",
+    height: "50%",
+    aspectRatio: 9 / 16,
     maxWidth: 300,
     alignSelf: "center",
     borderRadius: 20,

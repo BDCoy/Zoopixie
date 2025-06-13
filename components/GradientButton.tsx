@@ -9,7 +9,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 
 interface GradientButtonProps {
-  onPress: () => void;
+  onPress?: () => void;
   text: string;
   style?: ViewStyle;
   textStyle?: TextStyle;
@@ -24,7 +24,10 @@ export default function GradientButton({
   colors = ["#55b7fa", "#55f2a6"],
 }: GradientButtonProps) {
   return (
-    <TouchableOpacity style={[styles.buttonWrapper, style]} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.buttonWrapper, style]}
+      onPress={onPress ? onPress : () => {}}
+    >
       <LinearGradient
         colors={colors}
         start={{ x: 0, y: 0 }}
@@ -50,6 +53,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "white",
     textAlign: "center",
-    fontFamily: "BalooTammudu2-Bold"
+    fontFamily: "BalooTammudu2-Bold",
   },
 });

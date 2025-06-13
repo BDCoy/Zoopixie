@@ -64,6 +64,7 @@ create table ai_videos (
   id serial primary key,  -- Unique identifier for the video
   user_id uuid references users(id) on delete cascade,  -- Associate the video with a user
   video_url text not null,  -- URL to the generated video
+  thumbnail text,
   video_title text not null,  -- Title or description for the video
   video_status video_status_enum default 'TASK_STATUS_PROCESSING',  -- Use ENUM for task status
   generated_at timestamp with time zone default now(),  -- Timestamp for when the video was generated

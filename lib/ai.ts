@@ -1,30 +1,34 @@
 import { supabase } from "./supabase";
+import axios from "axios";
+import { decode } from "base64-arraybuffer";
 
 const API_KEY = process.env.EXPO_PUBLIC_NOVITA_API_KEY;
 const API_BASE_URL = "https://api.novita.ai/v3";
 
 // Utility function to upload image to Supabase
-async function uploadImageToSupabase(base64Image: string): Promise<string> {
+async function uploadImageToSupabase(
+  base64: string,
+  userId: string
+): Promise<string> {
   try {
-    const response = await fetch(`data:image/jpeg;base64,${base64Image}`);
-    const blob = await response.blob();
-    const filename = `${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(7)}.jpg`;
-    const filePath = `drawings/${filename}`;
+    const fileName = `${userId}/${Date.now()}.jpg`;
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from("drawings")
-      .upload(filePath, blob, {
+      .upload(fileName, decode(base64), {
+        upsert: false,
         contentType: "image/jpeg",
-        cacheControl: "3600",
       });
+
+    if (error) {
+      console.error("Error uploading image: ", error);
+    }
 
     if (error) throw error;
 
     const {
       data: { publicUrl },
-    } = supabase.storage.from("drawings").getPublicUrl(filePath);
+    } = supabase.storage.from("drawings").getPublicUrl(fileName);
 
     return publicUrl;
   } catch (error: any) {
@@ -33,8 +37,14 @@ async function uploadImageToSupabase(base64Image: string): Promise<string> {
 }
 
 // Modified prompt to create a realistic and animated video from the drawing
-function generatePromptFromDrawing(): string {
-  return "Convert the uploaded drawing into a realistic, animated video using AI. For example, if I upload a drawing of a car, the drawing should be animated and appear as realistic as it would in a movie.";
+function generatePromptFromDrawing() {
+  return `
+    Act as an AI that transforms children's drawings into magical, realistic animated videos. 
+    When a child uploads a drawing (such as a car, dragon, or rocket), generate a short 10-second video that brings the drawing to life.
+    The video should make the drawing appear as though it is in a movie—realistic, yet full of imagination and wonder.
+    Retain the original colors and style of the drawing, while making it come to life in a dynamic, animated way.
+    The video should be exciting, visually captivating, and inspire the child to create more art.
+  `;
 }
 
 async function pollTaskResult(
@@ -98,47 +108,49 @@ async function pollTaskResult(
   throw new Error("Video generation timed out");
 }
 
-// Generate video and get taskId with fast_mode flag
 export async function generateVideo(
-  imageBase64: string,
+  base64: string,
   userId: string
 ): Promise<{ taskId: string; videoUrl?: string }> {
   try {
     // Upload image and get public URL
-    const imageUrl = await uploadImageToSupabase(imageBase64);
+    const imageUrl = await uploadImageToSupabase(base64, userId);
     const WEBHOOK_URL = process.env.EXPO_PUBLIC_WEBHOOK_API;
-    console.log(WEBHOOK_URL)
-    const generateResponse = await fetch(`${API_BASE_URL}/async/wan-i2v`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+
+    const generateResponse = await axios.post(
+      `${API_BASE_URL}/async/wan-i2v`,
+      {
         image_url: imageUrl,
         height: 1280,
         width: 720,
         prompt: generatePromptFromDrawing(),
-        fast_mode: true, // Fast mode flag
+        fast_mode: true,
         extra: {
           webhook: {
             url: WEBHOOK_URL,
           },
         },
-      }),
-    });
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    if (!generateResponse.ok) {
+    if (generateResponse.status !== 200) {
       throw new Error("Failed to start video generation");
     }
 
-    const { task_id } = await generateResponse.json();
+    const { task_id } = generateResponse.data;
 
     // Save the task_id and set initial status as 'TASK_STATUS_PROCESSING' in Supabase
     const { error } = await supabase.from("ai_videos").insert([
       {
         task_id, // Save the task_id to link to the video
         user_id: userId,
+        thumbnail: imageUrl,
         video_status: "TASK_STATUS_PROCESSING", // Set the status as processing initially
       },
     ]);
@@ -149,6 +161,7 @@ export async function generateVideo(
 
     return { taskId: task_id }; // Return task_id
   } catch (error: any) {
+    console.error("Error during video generation:", error);
     throw new Error(error.message || "Failed to generate video");
   }
 }

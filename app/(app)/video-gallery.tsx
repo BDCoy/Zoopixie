@@ -15,12 +15,15 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useVideo } from "@/context/VideoContext";
 import RightArrow from "../../assets/images/left.svg";
+import GradientButton from "@/components/GradientButton";
+import { Ionicons } from "@expo/vector-icons";
 
 interface AIVideo {
   id: string;
   user_id: string;
   task_id: string;
   video_url: string;
+  thumbnail: string;
   video_title: string;
   video_status: string;
   generated_at: string;
@@ -44,16 +47,16 @@ export default function VideoGallery() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('ai_videos')
-        .select('*')
-        .eq('user_id', user.id)
-        .not('video_url', 'is', null)
-        .order('generated_at', { ascending: false });
+        .from("ai_videos")
+        .select("*")
+        .eq("user_id", user.id)
+        .not("video_url", "is", null)
+        .order("generated_at", { ascending: false });
 
       if (error) throw error;
       setVideos(data || []);
     } catch (error: any) {
-      console.error('Error fetching videos:', error);
+      console.error("Error fetching videos:", error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -73,45 +76,28 @@ export default function VideoGallery() {
     // For now, return a random duration between 30-60 seconds
     // In a real app, you'd extract this from video metadata
     const durations = ["0:30", "0:45", "0:38", "0:52", "0:41", "0:49"];
-    const hash = url.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
+    const hash = url.split("").reduce((a, b) => {
+      a = (a << 5) - a + b.charCodeAt(0);
       return a & a;
     }, 0);
     return durations[Math.abs(hash) % durations.length];
   };
 
-  const getVideoThumbnail = (videoUrl: string) => {
-    // For now, we'll use placeholder thumbnails
-    // In production, you'd generate actual video thumbnails
-    const thumbnails = [
-      "https://images.pexels.com/photos/1261728/pexels-photo-1261728.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
-      "https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
-      "https://images.pexels.com/photos/1261427/pexels-photo-1261427.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
-      "https://images.pexels.com/photos/1261820/pexels-photo-1261820.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
-      "https://images.pexels.com/photos/1261422/pexels-photo-1261422.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1",
-    ];
-    
-    const hash = videoUrl.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    return thumbnails[Math.abs(hash) % thumbnails.length];
-  };
+  const redirectBack = () => router.push("/upload");
 
   const renderVideoItem = (video: AIVideo) => (
-    <TouchableOpacity 
-      key={video.id} 
+    <TouchableOpacity
+      key={video.id}
       style={styles.videoItem}
       onPress={() => handleVideoPress(video)}
     >
       <Image
-        source={{ uri: getVideoThumbnail(video.video_url) }}
+        source={{ uri: video.thumbnail }}
         style={styles.thumbnail}
         defaultSource={require("../../assets/images/rectangle-2.jpeg")}
       />
       <View style={styles.durationContainer}>
-        <View style={styles.playIcon} />
-        <Text style={styles.duration}>{formatDuration(video.video_url)}</Text>
+        <Ionicons name="play" style={styles.playIcon} />
       </View>
     </TouchableOpacity>
   );
@@ -130,7 +116,10 @@ export default function VideoGallery() {
       return (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Failed to load videos</Text>
-          <TouchableOpacity onPress={fetchUserVideos} style={styles.retryButton}>
+          <TouchableOpacity
+            onPress={fetchUserVideos}
+            style={styles.retryButton}
+          >
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -141,13 +130,15 @@ export default function VideoGallery() {
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No videos yet!</Text>
-          <Text style={styles.emptySubText}>Create your first animated drawing</Text>
-          <TouchableOpacity 
-            onPress={() => router.push("/upload")} 
-            style={styles.createButton}
-          >
-            <Text style={styles.createButtonText}>Create Video</Text>
-          </TouchableOpacity>
+          <Text style={styles.emptySubText}>
+            Create your first animated drawing
+          </Text>
+
+          <GradientButton
+            style={styles.createButtonContainer}
+            onPress={redirectBack}
+            text="Create Video"
+          />
         </View>
       );
     }
@@ -157,9 +148,7 @@ export default function VideoGallery() {
         <Text style={styles.sectionTitle}>
           {videos.length === 1 ? "1 Video" : `${videos.length} Videos`}
         </Text>
-        <View style={styles.videoGrid}>
-          {videos.map(renderVideoItem)}
-        </View>
+        <View style={styles.videoGrid}>{videos.map(renderVideoItem)}</View>
       </>
     );
   };
@@ -192,7 +181,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff2dd",
-    paddingHorizontal: 20
+    paddingHorizontal: 20,
   },
   content: {
     padding: 20,
@@ -259,9 +248,9 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   playIcon: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 10,
     backgroundColor: "white",
   },
   duration: {
@@ -322,15 +311,9 @@ const styles = StyleSheet.create({
     fontFamily: "BalooTammudu2-Regular",
     marginBottom: 24,
   },
-  createButton: {
-    backgroundColor: "#55F2A6",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
-  },
-  createButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontFamily: "BalooTammudu2-Bold",
+  createButtonContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    width: "50%",
   },
 });

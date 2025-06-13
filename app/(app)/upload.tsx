@@ -16,7 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useMediaLibraryPermissions } from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useVideo } from "@/context/VideoContext";
-import { generateVideo } from "@/lib/novita";
+import { generateVideo } from "@/lib/ai";
 import { useAuth } from "@/context/AuthContext";
 
 export default function UploadScreen() {
@@ -29,11 +29,11 @@ export default function UploadScreen() {
   const { user } = useAuth();
 
   // Handle image to video conversion
-  const handleImageToVideo = async (base64Image: string) => {
+  const handleImageToVideo = async (base64: string) => {
     try {
       setIsGenerating(true);
       setError(null);
-      const { taskId } = await generateVideo(base64Image, user.id);
+      const { taskId } = await generateVideo(base64, user.id);
       setTaskId(taskId);
       router.push("/video-output");
     } catch (error: any) {
@@ -70,6 +70,7 @@ export default function UploadScreen() {
       });
 
       if (!result.canceled && result.assets[0].base64) {
+        console.log(result.assets)
         await handleImageToVideo(result.assets[0].base64);
       }
       setShowCamera(false);
